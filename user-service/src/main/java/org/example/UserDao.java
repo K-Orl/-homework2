@@ -5,20 +5,24 @@ import org.hibernate.Transaction;
 
 import java.util.List;
 
-public class UserDao {
+public class UserDao implements IUserDao {
 
+    @Override
     public void save(User user) {
         executeInsideTransaction(session -> session.save(user));
     }
 
+    @Override
     public void update(User user) {
         executeInsideTransaction(session -> session.update(user));
     }
 
+    @Override
     public void delete(User user) {
         executeInsideTransaction(session -> session.delete(user));
     }
 
+    @Override
     public User getById(Long id) {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             return session.get(User.class, id);
@@ -28,6 +32,7 @@ public class UserDao {
         }
     }
 
+    @Override
     public List<User> getAll() {
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             return session.createQuery("from User", User.class).list();
@@ -37,7 +42,6 @@ public class UserDao {
         }
     }
 
-    // Вспомогательный метод для операций с транзакцией
     private void executeInsideTransaction(TransactionalAction action) {
         Transaction tx = null;
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
@@ -50,7 +54,6 @@ public class UserDao {
         }
     }
 
-    // Функциональный интерфейс для передачи лямбды
     @FunctionalInterface
     private interface TransactionalAction {
         void execute(Session session);
