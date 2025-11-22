@@ -1,6 +1,6 @@
 package org.example;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,8 +14,8 @@ public class User {
     private String email;
     private int age;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public User() {}
 
@@ -23,6 +23,11 @@ public class User {
         this.name = name;
         this.email = email;
         this.age = age;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 
     public Long getId() { return id; }

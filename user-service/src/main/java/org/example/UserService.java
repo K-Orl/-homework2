@@ -1,44 +1,59 @@
 package org.example;
 
-import java.util.List;
+import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
 public class UserService {
 
-    private final IUserDao userDao;
+    private final UserRepository repository;
 
-    // Конструктор с внедрением DAO
-    public UserService(IUserDao userDao) {
-        this.userDao = userDao;
+    public UserService(UserRepository repository) {
+        this.repository = repository;
     }
 
-    // Создание нового пользователя
-    public Long createUser(String name, String email, int age) {
-        User user = new User(name, email, age);
-        userDao.save(user);
-        return user.getId();
+    // Создать пользователя
+    public UserDto createUser(UserDto dto) {
+        User user = new User(dto.getName(), dto.getEmail(), dto.getAge());
+        User saved = repository.save(user);
+        return mapToDto(saved);
     }
 
     // Получить всех пользователей
-    public List<User> getAllUsers() {
-        return userDao.getAll();
+    public List<UserDto> getAllUsers() {
+        return repository.findAll().stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
     }
 
-    // Удалить пользователя по ID
-    public void deleteUser(Long id) {
-        User user = userDao.getById(id);
-        if (user != null) {
-            userDao.delete(user);
-        }
+    // Получить пользователя по ID
+    public UserDto getUserById(Long id) {
+        return repository.findById(id).map(this::mapToDto).orElse(null);
     }
 
     // Обновить пользователя
-    public void updateUser(Long id, String name, String email, int age) {
-        User user = userDao.getById(id);
-        if (user != null) {
-            user.setName(name);
-            user.setEmail(email);
-            user.setAge(age);
-            userDao.update(user);
+    public UserDto updateUser(Long id, UserDto dto) {
+        return repository.findById(id).map(user -> {
+            user.setName(dto.getName());
+            user.setEmail(dto.getEmail());
+            user.setAge(dto.getAge());
+            return mapToDto(repository.save(user));
+        }).orElse(null);
+    }
+
+    // Удалить пользователя
+    public boolean deleteUser(Long id) {
+        if (repository.existsById(id)) {
+            repository.deleteById(id);
+            return true;
         }
+        return false;
+    }
+
+    // Преобразование User -> UserDto
+    private UserDto mapToDto(User user) {
+        return new UserDto(user.getId(), user.getName(), user.getEmail(), user.getAge());
     }
 }

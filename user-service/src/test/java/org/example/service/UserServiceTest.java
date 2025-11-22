@@ -1,94 +1,87 @@
 package org.example.service;
 
-import org.example.*;
-import org.junit.jupiter.api.*;
+import org.example.User;
+import org.example.UserDto;
+import org.example.UserRepository;
+import org.example.UserService;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
-public class UserServiceTest {
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+class UserServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
     private UserService userService;
-    private FakeUserDao fakeDao;
 
-    @BeforeEach
-    void setUp() {
-        fakeDao = new FakeUserDao();
-        userService = new UserService(fakeDao);
-    }
-
-    @Test
-    void testCreateUser() {
-        Long id = userService.createUser("Anna", "anna@mail.com", 22);
-
-        Assertions.assertNotNull(id);
-        Assertions.assertEquals(1, fakeDao.users.size());
+    public UserServiceTest() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
     void testGetAllUsers() {
-        userService.createUser("A", "a@mail", 10);
-        userService.createUser("B", "b@mail", 20);
+        when(userRepository.findAll()).thenReturn(List.of(
+                new User("Alice", "alice@mail.com", 25),
+                new User("Bob", "bob@mail.com", 30)
+        ));
 
-        List<User> users = userService.getAllUsers();
-
-        Assertions.assertEquals(2, users.size());
+        List<UserDto> users = userService.getAllUsers();
+        assertEquals(2, users.size());
+        verify(userRepository, times(1)).findAll();
     }
 
     @Test
-    void testDeleteUser() {
-        Long id = userService.createUser("A", "a@mail", 10);
-        userService.deleteUser(id);
+    void testCreateUser() {
+        UserDto dto = new UserDto(null, "Charlie", "charlie@mail.com", 28, null);
+        User user = new User("Charlie", "charlie@mail.com", 28);
+        when(userRepository.save(any(User.class))).thenReturn(user);
 
-        Assertions.assertTrue(fakeDao.users.isEmpty());
+        UserDto created = userService.createUser(dto);
+        assertEquals("Charlie", created.getName());
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void testGetUserById() {
+        User user = new User("Anna", "anna@mail.com", 22);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        UserDto found = userService.getUserById(1L);
+        assertNotNull(found);
+        assertEquals("Anna", found.getName());
+        verify(userRepository, times(1)).findById(1L);
     }
 
     @Test
     void testUpdateUser() {
-        Long id = userService.createUser("A", "a@mail", 10);
+        User existing = new User("Alice", "alice@mail.com", 25);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.save(any(User.class))).thenReturn(existing);
 
-        userService.updateUser(id, "New", "new@mail", 99);
+        UserDto updateDto = new UserDto(null, "AliceUpdated", "alice2@mail.com", 26, null);
+        UserDto updated = userService.updateUser(1L, updateDto);
 
-        User u = fakeDao.users.get(0);
-        Assertions.assertEquals("New", u.getName());
-        Assertions.assertEquals(99, u.getAge());
+        assertEquals("AliceUpdated", updated.getName());
+        assertEquals(26, updated.getAge());
+        verify(userRepository, times(1)).findById(1L);
+        verify(userRepository, times(1)).save(existing);
     }
 
-    // --- FAKE DAO (in-memory) ---
-    private static class FakeUserDao implements IUserDao {
+    @Test
+    void testDeleteUser() {
+        doNothing().when(userRepository).deleteById(1L);
 
-        List<User> users = new ArrayList<>();
-        long counter = 1;
-
-        @Override
-        public void save(User user) {
-            user.setName(user.getName());
-            try {
-                var field = User.class.getDeclaredField("id");
-                field.setAccessible(true);
-                field.set(user, counter++);
-            } catch (Exception ignored) {}
-
-            users.add(user);
-        }
-
-        @Override
-        public User getById(Long id) {
-            return users.stream()
-                    .filter(u -> u.getId().equals(id))
-                    .findFirst().orElse(null);
-        }
-
-        @Override
-        public void update(User user) {}
-
-        @Override
-        public void delete(User user) {
-            users.remove(user);
-        }
-
-        @Override
-        public List<User> getAll() {
-            return users;
-        }
+        userService.deleteUser(1L);
+        verify(userRepository, times(1)).deleteById(1L);
     }
 }
