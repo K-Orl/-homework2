@@ -1,58 +1,65 @@
 package org.example.dao;
 
-import org.example.HibernateUtil;
 import org.example.User;
 import org.example.UserDao;
 import org.junit.jupiter.api.*;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class UserDaoIT {
+class UserDaoIT {
 
     private UserDao userDao;
 
     @BeforeAll
-    public void setUp() {
+    void setup() {
         userDao = new UserDao();
     }
 
-    @AfterAll
-    public void tearDown() {
-        HibernateUtil.shutdown(); // закрываем сессию после всех тестов
+    @BeforeEach
+    void cleanTable() {
+        // чистим таблицу перед каждым тестом
+        userDao.getAll().forEach(userDao::delete);
     }
 
     @Test
     @Order(1)
-    public void testSaveUser() {
+    void testSaveUser() {
         User user = new User("Alice", "alice@test.com", 23);
         userDao.save(user);
-        Assertions.assertNotNull(user.getId(), "ID должен быть присвоен после сохранения");
+        assertNotNull(user.getId());
     }
 
     @Test
     @Order(2)
-    public void testGetUserById() {
+    void testGetUserById() {
         User user = new User("Bob", "bob@test.com", 30);
         userDao.save(user);
 
         User loaded = userDao.getById(user.getId());
-        Assertions.assertNotNull(loaded, "Пользователь должен быть найден");
-        Assertions.assertEquals("Bob", loaded.getName(), "Имя пользователя должно совпадать");
+        assertNotNull(loaded);
+        assertEquals("Bob", loaded.getName());
     }
 
     @Test
     @Order(3)
-    public void testGetAllUsers() {
+    void testGetAllUsers() {
+        User u1 = new User("Anna", "anna@test.com", 22);
+        User u2 = new User("Ben", "ben@test.com", 28);
+        userDao.save(u1);
+        userDao.save(u2);
+
         List<User> users = userDao.getAll();
-        Assertions.assertNotNull(users, "Список пользователей не должен быть null");
-        Assertions.assertTrue(users.size() > 0, "Список должен содержать хотя бы одного пользователя");
+        assertNotNull(users);
+        assertTrue(users.size() == 2, "Должно быть 2 пользователя");
     }
 
     @Test
     @Order(4)
-    public void testUpdateUser() {
+    void testUpdateUser() {
         User user = new User("Charlie", "charlie@test.com", 25);
         userDao.save(user);
 
@@ -60,17 +67,16 @@ public class UserDaoIT {
         userDao.update(user);
 
         User updated = userDao.getById(user.getId());
-        Assertions.assertEquals(26, updated.getAge(), "Возраст должен быть обновлён");
+        assertEquals(26, updated.getAge());
     }
 
     @Test
     @Order(5)
-    public void testDeleteUser() {
+    void testDeleteUser() {
         User user = new User("David", "david@test.com", 28);
         userDao.save(user);
 
         userDao.delete(user);
-        User deleted = userDao.getById(user.getId());
-        Assertions.assertNull(deleted, "Пользователь должен быть удалён");
+        assertNull(userDao.getById(user.getId()));
     }
 }
